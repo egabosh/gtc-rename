@@ -1,0 +1,6 @@
+#do "/root/rename-subs/asciilower";
+do "/root/rename-subs/nospecial";
+#do "/root/rename-subs/a-zA-Z0-9._";
+unless (/^Doku /) { $_= "Doku " . $_; }
+s/_+/_/g;
+s/ +/ /g;

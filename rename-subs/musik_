@@ -1,0 +1,8 @@
+do "/root/rename-subs/nospecial";
+s/ -- ...........\.mp4$/.mp4/;
+unless (/^Musik /) { $_= "Musik " . $_; }
+s/_+/_/g;
+s/ - / -- /g;
+s/ – / -- /g;
+s/([a-zA-Z0-9])- /$1 -- /g;
+s/ +/ /g;

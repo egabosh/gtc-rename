@@ -1,0 +1,20 @@
+---
+- name: gtc-rename
+  hosts: all
+  tasks:
+    - name: Install gtc-rename dependencies
+      apt:
+        name:
+          - perl
+          - libfile-find-rule-perl
+          - libfile-readbackwards-perl
+          - libfile-basedir-perl
+
+    - name: gtc-rename
+      ansible.builtin.get_url:
+        url: 
+        dest: /usr/local/bin/gtc-rename
+        owner: root
+        group: root
+        mode: '0555'
+        backup: yes

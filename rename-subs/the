@@ -1,0 +1,34 @@
+if (/^the_/) {
+ s/^the_//;
+ s/\./_the./;
+}
+if (/^der_/) {
+ s/^der_//;
+ s/\./_der./;
+}
+if (/^die_/) {
+ s/^die_//;
+ s/\./_die./;
+}
+if (/^das_/) {
+ s/^das_//;
+ s/\./_das./;
+}
+if (/^The /) {
+ s/^The //;
+ s/\./ The./;
+}
+if (/^Der /) {
+ s/^Der //;
+ s/\./ Der./;
+}
+if (/^Die /) {
+ s/^Die //;
+ s/\./ Die./;
+}
+if (/^Das /) {
+ s/^Das //;
+ s/\./ Das./;
+}
+
+

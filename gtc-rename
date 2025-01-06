@@ -1,0 +1,178 @@
+#!/usr/bin/perl -w
+
+# === Strict Perl ===
+use strict;
+
+# === Initialize vars ===
+use vars qw/*name *dir *opt_h *opt_p *path *opt_v *verb *opt_r *regex *sim *opt_s *files *opt_u/;
+*name=*File::Find::name;
+*dir=*File::Find::dir;
+
+# === Parse Commandline ===
+# Clear vars
+$opt_p="";
+$opt_r="";
+$opt_u="";
+# Get the Options
+use Getopt::Std;
+getopts('hvp:r:su:');
+
+# Run help/usage?
+usage() if ($opt_h);
+
+# Be verbose?
+$verb=1 if ($opt_v);
+
+# Simulating?
+$sim=0;
+if ($opt_s) {
+ print "Only simulating - Not really renaming...\n";
+ $sim=1;
+}
+
+# Shall I undo something?
+if ($opt_u) {
+ # Test if the undo-file is existing
+ if (-f $opt_u) {
+  # Open and read it
+  use File::ReadBackwards;
+  my $line = File::ReadBackwards->new($opt_u) || die "Could not open $opt_u: $!" ;
+  until ( $line->eof ) {
+   my $undo=$line->readline;
+   # ...remove newline
+   chomp($undo);
+   # Get the two filenames
+   my @undo=split(" \/\/\/ ", $undo);
+   my $source=$undo[0];
+   my $target=$undo[1];
+   # Rename it
+   print "Undo Renaming '$source' to '$target'\n";
+   rename($source, $target) || warn "Could not rename $source to $target: $!\n" unless $sim;
+  }
+  # End prof if there are no more renamings
+  exit 0 unless $opt_p;
+ }
+ else {
+  die "You have to specify a valid unod-file if you want to undo a action\n";
+ }
+}
+
+
+# Get path from cmdline
+if (-d $opt_p) {
+ $path=$opt_p;
+ # Get absolute path
+ chdir($path) || die "Count not change to $path: $!";
+ use Cwd;
+ $path=getcwd;
+ print "Using path $path\n" if $verb;
+}
+else {
+ print "ERROR: No or non existing Path $opt_p specified...\n\n";
+ usage();
+}
+
+# Get regex file from cmdline
+if (-f $opt_r) {
+ $regex=$opt_r;
+ print "Using regex-file $regex\n" if $verb;
+}
+else {
+ print "ERROR: No or non existing regexfile $opt_r specified...\n\n";
+ usage();
+}
+
+# === Prepare Undo/Log-File ===
+# Create Undo/Log file
+my $undo;
+unless ($sim) {
+ mkdir($ENV{HOME} . "/.gtc-rename",0700) unless ( -d $ENV{HOME} . "/.gtc-rename" );
+ use POSIX qw/strftime/;
+ $undo=$ENV{HOME} . '/.gtc-rename/gtc-rename-undo-' . strftime('%Y-%m-%d-%H-%M-%S',localtime) . '-PID-' . $$;
+ open(UNDORENAME, ">$undo") || die "ERROR: Can't open Undo $undo file: $!";
+}
+# === Find files ===
+use File::Find();
+use File::Basename;
+print "Searching files...\n" if $verb;
+File::Find::find({wanted => \&files}, $path);
+print "\n" if $verb;
+@files=reverse(@files);
+use File::Basename;
+foreach my $file (@files) {
+ s_rename($file);
+}
+
+# === Close Undo-Log ===
+unless ($sim) {
+ close(UNDORENAME);
+ # Remove undo-file if it is empty
+ unlink $undo unless (-s $undo);
+}
+
+# === Put files in array ===
+sub files {
+ print "." if $verb;
+ return 0 if ($name eq $path);
+ push(@files,$name);
+}
+
+# === Rename files ===
+sub s_rename {
+ # Get the name
+ my $name=shift;
+ print "thinking about '$name'...\n" if $verb;
+ # Get the file ($_) and the path ($d) name
+ $_=basename($name);
+ our $d=dirname($name);
+ # Run the regex-file
+ do $regex;
+ # Remove very bad newlines
+ s/\n/_/g;
+ # put the new path/name back together
+ my $n=$d . "/" . $_;
+ # If the filename has changed
+ unless ($n eq $name) {
+  # Check if the target file exists
+  if (-e $n) {
+   warn "ERROR: Can't rename file ($name) because the target ($n) already exists";
+  }
+  else {
+   # Rename file and write the log
+   print "Renaming '$name' to '$n'\n" if (($verb) || ($sim));
+   rename($name, $n) || warn "ERROR: Renaming from $name to $n failed: $!\n" unless $sim;
+   # remove bad newline in the old filename if exists
+   $name=~s/\n/_/g;
+   print UNDORENAME "$n /// $name\n" unless $sim; 
+  }
+ }
+}
+
+# === Help ===
+sub usage {
+ print "Overview:
+=========
+This renames all filesnames (and dirs) in a specified path with specified Regex'es in a specified regex-file.
+For e.g. to rename change the character a in all filenames to b and y into z you can create a regex file e.g. /tmp/rename with the following lines:
+s/a/b/g;
+s/y/z/g;
+Then you run this command with the following options:
+$0 -p /path/in/which/you/want/to/rename -r /tmp/rename
+
+To replace all special characters then the latin alphabet and numbers with _ you can put this in your regex-file:
+s/[^a-zA-Z0-9]/_/g;
+
+You can use all substitutions perl can do an of course your own per code in the regex file.
+
+Options:
+========
+-h\t-> This help/usage
+-p path\t-> The path in which you want to rename all files
+-r file\t-> The file with your Substuitutions
+-v\t-> Be verbose
+-s\t-> Dry (simulation) run
+-u file\t-> Undo a job. You have to specify an undo file. The undo-files are in the .gtc-rename in yout homedir: ~/.gtc-rename
+";
+ exit 1;
+}
+

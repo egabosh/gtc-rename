@@ -1,0 +1,7 @@
+do "/root/rename-subs/nospecial";
+do "/root/rename-subs/videos";
+if (/^Serie /) { next; }
+unless (/^Film /) { $_= "Film " . $_; }
+s/_+/_/g;
+s/ +/ /g;
+

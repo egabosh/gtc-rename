@@ -12,7 +12,7 @@
 
     - name: gtc-rename
       ansible.builtin.get_url:
-        url: 
+        url: https://raw.githubusercontent.com/egabosh/gtc-rename/refs/heads/main/gtc-rename
         dest: /usr/local/bin/gtc-rename
         owner: root
         group: root
